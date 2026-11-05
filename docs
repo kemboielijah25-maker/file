@@ -1,0 +1,127 @@
+index.html
+client'  </div>
+            <div>
+              <label className="block font-medium mb-1">Cover Letter</label>
+              <textarea
+                required
+                rows={6}
+                value={coverLetter}
+                onChange={(e) => setCoverLetter(e.target.value)}
+                cl;'use 
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+
+export default function JobDetail({ params }: { params: { id: string } }) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [job, setJob] = useState<any>(null);
+  const [showApply, setShowApply] = useState(false);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/jobs/${params.id}`)
+      .then((r) => r.json())
+      .then(setJob);
+  }, [params.id]);
+
+  async function handleApply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!session) {
+      router.push('/login');
+      return;
+    }
+    setLoading(true);
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: params.id, coverLetter, phone }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else {
+      alert(data.error);
+      setLoading(false);
+    }
+  }
+
+  if (!job) return <div className="p-10">Loading...</div>;
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="bg-white p-8 rounded-xl shadow">
+        <h1 className="text-3xl font-bold">{job.title}</h1>
+        <p className="text-slate-600 mt-2">
+          🏢 {job.employer.company} • 📍 {job.airport}, {job.location}
+        </p>
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded text-sm">{job.category}</span>
+          <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-sm">{job.jobType}</span>
+          <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded text-sm">
+            {job.currency} {job.salaryMin?.toLocaleString()} – {job.salaryMax?.toLocaleString()}
+          </span>
+        </div>
+
+        <section className="mt-8">
+          <h2 className="text-xl font-bold mb-2">Description</h2>
+          <p className="text-slate-700 whitespace-pre-line">{job.description}</p>
+        </section>
+
+        <section className="mt-6">
+          <h2 className="text-xl font-bold mb-2">Requirements</h2>
+          <p className="text-slate-700 whitespace-pre-line">{job.requirements}</p>
+        </section>
+
+        {job.benefits && (
+          <section className="mt-6">
+            <h2 className="text-xl font-bold mb-2">Benefits</h2>
+            <p className="text-slate-700 whitespace-pre-line">{job.benefits}</p>
+          </section>
+        )}
+
+        <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="font-semibold text-amber-800">
+            ⚠️ Application Fee: {job.currency} {(job.applicationFee / 100).toFixed(2)}
+          </p>
+          <p className="text-sm text-amber-700 mt-1">
+            A non-refundable application processing fee is required to submit your application.
+          </p>
+        </div>
+
+        {!showApply ? (
+          <button
+            onClick={() => setShowApply(true)}
+            className="mt-6 bg-sky-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-sky-700"
+          >
+            Apply & Pay Fee
+          </button>
+        ) : (
+          <form onSubmit={handleApply} className="mt-6 space-y-4">
+            <div>
+              <label className="block font-medium mb-1">Phone Number</label>
+              <input
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full border rounded-lg px-4 py-2"
+              />
+          as    placeholder="+1 555 123 4567"
+            sName="w-full border rounded-lg px-4 py-2"
+                placeholder="Why are you a great fit for this role?"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-emerald-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {loading ? 'Redirecting to payment...' : `Pay ${job.currency} ${(job.applicationFee / 100).toFixed(2)} & Submit`}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
